@@ -39,6 +39,11 @@ type NotifyResult struct {
 	Result *string `json:"result,omitempty"`
 }
 
+// RectifyResult structure with JSON API metadata
+type RectifyResult struct {
+	Result *string `json:"result,omitempty"`
+}
+
 // AxfrRetrieveResult structure with JSON API metadata
 type AxfrRetrieveResult struct {
 	Result *string `json:"result,omitempty"`
@@ -204,6 +209,18 @@ func (z *ZonesService) Notify(ctx context.Context, domain string) (*NotifyResult
 	notifyResult := &NotifyResult{}
 	_, err = z.client.do(req, notifyResult)
 	return notifyResult, err
+}
+
+// Rectify zone content for DNSSEC compliance
+func (z *ZonesService) Rectify(ctx context.Context, domain string) (*RectifyResult, error) {
+	req, err := z.client.newRequest(ctx, "PUT", fmt.Sprintf("servers/%s/zones/%s/rectify", z.client.VHost, makeDomainCanonical(domain)), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	rectifyResult := &RectifyResult{}
+	_, err = z.client.do(req, rectifyResult)
+	return rectifyResult, err
 }
 
 // AxfrRetrieve requests a axfr transfer from the master to requesting slave

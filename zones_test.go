@@ -289,6 +289,21 @@ func registerZoneMockResponder(testDomain string, zoneKind ZoneKind) {
 		},
 	)
 
+	httpmock.RegisterResponder("PUT", generateTestAPIVHostURL()+"/zones/"+makeDomainCanonical(testDomain)+"/rectify",
+		func(req *http.Request) (*http.Response, error) {
+			if res := verifyAPIKey(req); res != nil {
+				return res, nil
+			}
+
+			if req.Body != nil {
+				log.Print("Request body is not nil")
+				return httpmock.NewBytesResponse(http.StatusBadRequest, []byte{}), nil
+			}
+
+			return httpmock.NewStringResponse(http.StatusOK, "{\"result\": \"Rectified\"}"), nil
+		},
+	)
+
 }
 
 func TestListZones(t *testing.T) {
@@ -647,6 +662,30 @@ func TestAxfrRetrieveError(t *testing.T) {
 	p := initialisePowerDNSTestClient()
 	p.Port = "x"
 	if _, err := p.Zones.AxfrRetrieve(context.Background(), testDomain); err == nil {
+		t.Error("error is nil")
+	}
+}
+
+func TestRectify(t *testing.T) {
+	testDomain := generateTestZone(true)
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	registerZoneMockResponder(testDomain, MasterZoneKind)
+	p := initialisePowerDNSTestClient()
+	rectifyRetrieveResult, err := p.Zones.Rectify(context.Background(), testDomain)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	if *rectifyRetrieveResult.Result != "Rectified" {
+		t.Errorf("Wrong result: %q", *rectifyRetrieveResult.Result)
+	}
+}
+
+func TestRectifyError(t *testing.T) {
+	testDomain := generateTestZone(false)
+	p := initialisePowerDNSTestClient()
+	p.Port = "x"
+	if _, err := p.Zones.Rectify(context.Background(), testDomain); err == nil {
 		t.Error("error is nil")
 	}
 }
